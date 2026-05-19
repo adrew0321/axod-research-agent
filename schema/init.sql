@@ -35,3 +35,14 @@ CREATE TABLE IF NOT EXISTS trace_events (
 CREATE INDEX IF NOT EXISTS idx_trace_query ON trace_events(query_id, sequence);
 CREATE INDEX IF NOT EXISTS idx_queries_created ON queries(created_at);
 CREATE INDEX IF NOT EXISTS idx_queries_status ON queries(status);
+
+CREATE TABLE IF NOT EXISTS research_memory (
+  id TEXT PRIMARY KEY,
+  query_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  FOREIGN KEY (query_id) REFERENCES queries(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_query ON research_memory(query_id);
