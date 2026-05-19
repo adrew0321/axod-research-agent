@@ -124,6 +124,33 @@ export class TraceStore {
       .all();
     return { query, events: events.results };
   }
+
+  /** Store raw or chunked research memory into D1. */
+  async storeResearchMemory(
+    queryId: string,
+    chunks: { url: string; title: string; content: string }[]
+  ): Promise<void> {
+    const statements = chunks.map(chunk =>
+      this.db
+        .prepare(
+          `INSERT INTO research_memory (id, query_id, url, title, content)
+           VALUES (?, ?, ?, ?, ?)`
+        )
+        .bind(crypto.randomUUID(), queryId, chunk.url, chunk.title, chunk.content)
+    );
+    await this.db.batch(statements);
+  }
+
+  /** Retrieve research memory for Alfred to synthesize. */
+  async getResearchMemory(
+    queryId: string
+  ): Promise<{ url: string; title: string; content: string }[]> {
+    const { results } = await this.db
+      .prepare(`SELECT url, title, content FROM research_memory WHERE query_id=?`)
+      .bind(queryId)
+      .all<{ url: string; title: string; content: string }>();
+    return results;
+  }
 }
 
 /** SHA-256 hash an IP address for privacy-preserving logging. */

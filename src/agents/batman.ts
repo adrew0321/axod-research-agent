@@ -66,7 +66,8 @@ export function formatSearchContext(results: TavilyResult[]): string {
 export async function answerQuick(
   ai: Ai,
   query: string,
-  searchResults: TavilyResult[]
+  searchResults: TavilyResult[],
+  env?: { AI_GATEWAY_URL?: string; ANTHROPIC_API_KEY?: string }
 ): Promise<LLMResponse> {
   return callLLM(ai, {
     systemPrompt: BATMAN_SYSTEM_PROMPT,
@@ -74,5 +75,6 @@ export async function answerQuick(
     context: formatSearchContext(searchResults),
     maxTokens: 800,
     temperature: 0.4, // lower = more decisive, more Batman
+    env,
   });
 }
