@@ -68,8 +68,35 @@ flowchart TD
 |---|---|---|
 | `GET` | `/` | Service health + agent list |
 | `GET` | `/hello` | Batman greeting + writes a trace event to D1 |
+| `POST` | `/research` | Submit a query (mode: `quick`), runs Tavily + LLM, returns structured answer with sources |
 | `GET` | `/trace/:id` | Retrieve a query + its full agent timeline |
-| `POST` | `/research` | *(Phase 2)* Submit a query, stream a report |
+
+### Example: POST /research
+
+```bash
+curl -X POST http://127.0.0.1:8787/research \
+  -H "Content-Type: application/json" \
+  -d '{"query":"What is Cloudflare Workers AI?","mode":"quick"}'
+```
+
+Response:
+```json
+{
+  "queryId": "ad233b68-3358-40a0-9289-b2d77c11eff9",
+  "mode": "quick",
+  "report": "Cloudflare Workers AI is a serverless edge inference platform...",
+  "sources": [
+    { "n": 1, "title": "Cloudflare Workers AI | Promptfoo", "url": "..." }
+  ],
+  "stats": {
+    "totalDurationMs": 3849,
+    "tokensIn": 1062,
+    "tokensOut": 122,
+    "costUsd": 0,
+    "sourcesFound": 5
+  }
+}
+```
 
 ---
 
@@ -123,8 +150,8 @@ pnpm deploy
 
 | Phase | Status |
 |---|---|
-| **1** — Repo scaffold + D1 + AI Gateway + `/hello` | ✅ |
-| **2** — Quick mode: single-agent flow with web search | ⏳ |
+| **1** — Repo scaffold + D1 + AI Gateway + `/hello` | ✅ v0.1.0 |
+| **2** — Quick mode: single-agent flow with web search | ✅ v0.2.0 |
 | **3** — Deep mode: Batman → Oracle → Alfred multi-agent flow | ⏳ |
 | **4** — Turnstile bot protection + per-IP rate limit | ⏳ |
 | **5** — Frontend `/research` page on the AXOD site | ⏳ |

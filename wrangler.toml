@@ -13,10 +13,17 @@ binding = "DB"
 database_name = "axod-research-traces"
 database_id = "94ff6810-7729-4238-897f-ff5bda732dbe"
 
+# Workers AI — free-tier LLM binding (Llama 3.3 70B for Phase 2)
+# When Anthropic API key arrives, we swap this for Claude via AI Gateway.
+# remote=true because Workers AI has no local emulator — always calls Cloudflare.
+[ai]
+binding = "AI"
+remote = true
+
 # Environment variables (non-secret)
 [vars]
 # AI Gateway URL — all Claude calls route through here for logging/caching
-AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/REPLACE_WITH_ACCOUNT_ID/axod-research/anthropic"
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/243a3def5fcf5f0db8918ee9f75daebd/axod-research/anthropic"
 ALLOWED_ORIGIN = "https://axodcreative.pages.dev"
 
 # Secrets are set via: wrangler secret put <NAME>

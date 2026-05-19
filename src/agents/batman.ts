@@ -1,18 +1,30 @@
 /**
  * 🦇 Batman — The Orchestrator
  *
- * Reads the incoming query, classifies it (quick vs deep), and dispatches
- * the team. In Phase 1 he says hello. In later phases he routes to Oracle
- * and Alfred.
+ * Reads incoming queries, classifies them, dispatches the team.
+ * In Phase 2 (Quick mode), Batman handles single-pass research himself
+ * after Oracle's search. In Phase 3 (Deep mode), Batman will route
+ * to Oracle then Alfred.
+ *
+ * Personality and voice canon documented in AGENTS.md.
  */
 
+import { callLLM, type LLMResponse } from '../llm';
+import type { TavilyResult } from '../tools/tavily';
+
 export const BATMAN_SYSTEM_PROMPT = `
-You are Batman — the operations lead for this research pipeline.
-You assess incoming queries, classify them, and direct your team.
-You speak in short, declarative sentences. You don't waste words.
-You address your agents by name (Oracle, Alfred). You issue clear directives.
-You are confident, never uncertain. If something is off, you say so directly.
-Never break character.
+You are Batman — the operations lead for a research pipeline.
+You take a user's query plus web search results and produce a clear,
+concise answer grounded in the sources provided.
+
+Rules:
+- Speak in short, declarative sentences. Don't waste words.
+- Stay confident. Never hedge with "I think" or "perhaps".
+- Cite sources inline using [1], [2], etc. matching the source list.
+- If the sources don't contain the answer, say so directly.
+- Open with the direct answer. No preamble. No "Great question."
+- End with a one-line "Bottom line:" summary.
+- Never break character.
 `.trim();
 
 export interface BatmanGreeting {
@@ -23,7 +35,7 @@ export interface BatmanGreeting {
 
 /**
  * Phase 1 stub — returns a Batman-voiced greeting.
- * Phase 2+ will route to Oracle/Alfred based on classification.
+ * Still used by the `/hello` endpoint as a health check.
  */
 export function greet(): BatmanGreeting {
   return {
@@ -31,4 +43,36 @@ export function greet(): BatmanGreeting {
     message: 'Operational. The team is assembled. Send me a query.',
     timestamp: Date.now(),
   };
+}
+
+/**
+ * Format Tavily results into a compact context block the LLM can read.
+ */
+export function formatSearchContext(results: TavilyResult[]): string {
+  if (results.length === 0) {
+    return 'NO SOURCES FOUND. Acknowledge this directly in your answer.';
+  }
+  const lines = results.map(
+    (r, i) =>
+      `[${i + 1}] ${r.title}\n    ${r.url}\n    ${r.content.slice(0, 600)}`
+  );
+  return `WEB SOURCES:\n\n${lines.join('\n\n')}`;
+}
+
+/**
+ * Phase 2: Quick mode — Batman answers directly using web search context.
+ * Wraps the LLM call with Batman's system prompt and the formatted sources.
+ */
+export async function answerQuick(
+  ai: Ai,
+  query: string,
+  searchResults: TavilyResult[]
+): Promise<LLMResponse> {
+  return callLLM(ai, {
+    systemPrompt: BATMAN_SYSTEM_PROMPT,
+    userMessage: `User query: ${query}`,
+    context: formatSearchContext(searchResults),
+    maxTokens: 800,
+    temperature: 0.4, // lower = more decisive, more Batman
+  });
 }
