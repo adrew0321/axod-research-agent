@@ -1,0 +1,29 @@
+{
+  "name": "axod-research-agent",
+  "version": "0.1.0",
+  "description": "Multi-agent research pipeline: Batman, Oracle, and Alfred collaborate to deliver structured intelligence reports.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "db:init": "wrangler d1 execute axod-research-traces --local --file=./schema/init.sql",
+    "db:init:remote": "wrangler d1 execute axod-research-traces --remote --file=./schema/init.sql",
+    "db:reset": "wrangler d1 execute axod-research-traces --local --file=./schema/reset.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.92.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "workerd",
+      "esbuild"
+    ]
+  }
+}

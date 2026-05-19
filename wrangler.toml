@@ -1,0 +1,26 @@
+name = "axod-research-agent"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Free tier observability — request logs in Cloudflare dashboard
+[observability]
+enabled = true
+
+# D1 — trace store for every agent query + every step
+[[d1_databases]]
+binding = "DB"
+database_name = "axod-research-traces"
+database_id = "94ff6810-7729-4238-897f-ff5bda732dbe"
+
+# Environment variables (non-secret)
+[vars]
+# AI Gateway URL — all Claude calls route through here for logging/caching
+AI_GATEWAY_URL = "https://gateway.ai.cloudflare.com/v1/REPLACE_WITH_ACCOUNT_ID/axod-research/anthropic"
+ALLOWED_ORIGIN = "https://axodcreative.pages.dev"
+
+# Secrets are set via: wrangler secret put <NAME>
+# Required secrets:
+#   ANTHROPIC_API_KEY  — Claude API key
+#   TAVILY_API_KEY     — Tavily search key (Phase 2)
+#   TURNSTILE_SECRET   — Turnstile validation secret (Phase 4)
