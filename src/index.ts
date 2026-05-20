@@ -44,52 +44,88 @@ function json(body: unknown, env: Env, status = 200): Response {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+    const origin = request.headers.get('Origin');
+    let allowedOrigin = env.ALLOWED_ORIGIN || '*';
+    if (origin) {
+      const isAllowed = 
+        origin === 'https://axodcreative.pages.dev' ||
+        origin === 'https://www.axodcreative.pages.dev' ||
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+      if (isAllowed) {
+        allowedOrigin = origin;
+      }
+    }
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(env) });
-    }
-
-    // ── GET / → service health ─────────────────────────────────────
-    if (url.pathname === '/') {
-      return json(
-        {
-          service: 'axod-research-agent',
-          version: '1.0.0',
-          status: 'operational',
-          agents: ['batman', 'oracle', 'alfred'],
-          phase: 3,
-          modes: ['quick', 'deep'],
-          turnstileConfigured: !!env.TURNSTILE_SECRET,
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': allowedOrigin,
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type',
         },
-        env
-      );
+      });
     }
 
-    // ── GET /hello → Batman greeting + trace ───────────────────────
-    if (url.pathname === '/hello' && request.method === 'GET') {
-      return handleHello(request, env);
-    }
+    const response = await handleRequest(request, env);
+    
+    // Construct new response with dynamic CORS headers
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set('Access-Control-Allow-Origin', allowedOrigin);
+    newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    newHeaders.set('Access-Control-Allow-Headers', 'Content-Type');
 
-    // ── POST /research → Quick / Deep mode SSE stream ───────────────
-    if (url.pathname === '/research' && request.method === 'POST') {
-      return handleResearchStream(request, env);
-    }
-
-    // ── GET /trace/:id → fetch a query + its trace events ──────────
-    const traceMatch = url.pathname.match(/^\/trace\/([a-f0-9-]+)$/);
-    if (traceMatch && request.method === 'GET') {
-      const trace = new TraceStore(env.DB);
-      const result = await trace.getQueryWithTrace(traceMatch[1]);
-      if (!result.query) {
-        return json({ error: 'not_found' }, env, 404);
-      }
-      return json(result, env);
-    }
-
-    return json({ error: 'not_found', path: url.pathname }, env, 404);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
   },
 };
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+
+  // ── GET / → service health ─────────────────────────────────────
+  if (url.pathname === '/') {
+    return json(
+      {
+        service: 'axod-research-agent',
+        version: '1.0.0',
+        status: 'operational',
+        agents: ['batman', 'oracle', 'alfred'],
+        phase: 3,
+        modes: ['quick', 'deep'],
+        turnstileConfigured: !!env.TURNSTILE_SECRET,
+      },
+      env
+    );
+  }
+
+  // ── GET /hello → Batman greeting + trace ───────────────────────
+  if (url.pathname === '/hello' && request.method === 'GET') {
+    return handleHello(request, env);
+  }
+
+  // ── POST /research → Quick / Deep mode SSE stream ───────────────
+  if (url.pathname === '/research' && request.method === 'POST') {
+    return handleResearchStream(request, env);
+  }
+
+  // ── GET /trace/:id → fetch a query + its trace events ──────────
+  const traceMatch = url.pathname.match(/^\/trace\/([a-f0-9-]+)$/);
+  if (traceMatch && request.method === 'GET') {
+    const trace = new TraceStore(env.DB);
+    const result = await trace.getQueryWithTrace(traceMatch[1]);
+    if (!result.query) {
+      return json({ error: 'not_found' }, env, 404);
+    }
+    return json(result, env);
+  }
+
+  return json({ error: 'not_found', path: url.pathname }, env, 404);
+}
 
 /** GET /hello — health check */
 async function handleHello(request: Request, env: Env): Promise<Response> {
