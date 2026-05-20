@@ -173,14 +173,14 @@ async function handleHello(request: Request, env: Env): Promise<Response> {
   return json({ queryId, ...greeting }, env);
 }
 
-/** Check rate limits using D1 (max 10 queries per IP per day) */
+/** Check rate limits using D1 (max 50 queries per IP per day) */
 async function checkRateLimit(db: D1Database, ipHash: string): Promise<boolean> {
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
   const result = await db
     .prepare('SELECT COUNT(*) as count FROM queries WHERE ip_hash=? AND created_at > ?')
     .bind(ipHash, oneDayAgo)
     .first<{ count: number }>();
-  return (result?.count ?? 0) < 10;
+  return (result?.count ?? 0) < 50;
 }
 
 /** Verify Cloudflare Turnstile token */
@@ -284,7 +284,7 @@ async function handleResearchStream(request: Request, env: Env): Promise<Respons
   // 4. Rate limiting (Phase 4)
   const isAllowed = await checkRateLimit(env.DB, ipHash);
   if (!isAllowed) {
-    return json({ error: 'rate_limit_exceeded', limit: 10 }, env, 429);
+    return json({ error: 'rate_limit_exceeded', limit: 50 }, env, 429);
   }
 
   // 5. SSE Streaming Setup
