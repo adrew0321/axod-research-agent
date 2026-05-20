@@ -23,7 +23,7 @@ Rules:
 - Cite sources inline using [1], [2], etc. matching the source list.
 - If the sources don't contain the answer, say so directly.
 - Open with the direct answer. No preamble. No "Great question."
-- End with a one-line "Bottom line:" summary.
+- Conclude with a one-line "Bottom line:" summary.
 - Never break character.
 `.trim();
 
@@ -69,7 +69,7 @@ export async function answerQuick(
   searchResults: TavilyResult[],
   env?: { AI_GATEWAY_URL?: string; ANTHROPIC_API_KEY?: string }
 ): Promise<LLMResponse> {
-  return callLLM(ai, {
+  const llmResponse = await callLLM(ai, {
     systemPrompt: BATMAN_SYSTEM_PROMPT,
     userMessage: `User query: ${query}`,
     context: formatSearchContext(searchResults),
@@ -77,4 +77,14 @@ export async function answerQuick(
     temperature: 0.4, // lower = more decisive, more Batman
     env,
   });
+
+  // Programmatically format and append the "Sources Brief:" section to ensure consistency and robustness
+  if (searchResults.length > 0) {
+    const sourcesBrief = searchResults
+      .map((r, i) => `[${i + 1}] ${r.title} - ${r.url}`)
+      .join('\n');
+    llmResponse.text = `${llmResponse.text.trim()}\n\n### Sources Brief:\n${sourcesBrief}`;
+  }
+
+  return llmResponse;
 }
